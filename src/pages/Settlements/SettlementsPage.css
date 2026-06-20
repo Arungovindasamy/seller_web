@@ -243,6 +243,26 @@
   font-weight: 700;
 }
 
+.calendar-day-btn--range-start {
+  background: #2962ff !important;
+  color: #fff !important;
+  border-radius: 50% !important;
+  font-weight: 700;
+}
+
+.calendar-day-btn--range-end {
+  background: #2962ff !important;
+  color: #fff !important;
+  border-radius: 50% !important;
+  font-weight: 700;
+}
+
+.calendar-day-btn--in-range {
+  background: rgba(41, 98, 255, 0.12) !important;
+  border-radius: 0 !important;
+  color: #2962ff !important;
+}
+
 .datepicker-footer {
   border-top: 1px solid #f3f4f6;
   padding-top: 12px;

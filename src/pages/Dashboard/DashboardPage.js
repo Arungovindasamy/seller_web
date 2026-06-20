@@ -64,7 +64,7 @@ const DashboardPage = () => {
         sellerService.getAdvertisementSummary(sellerId),
         sellerService.getTopSellingProducts(sellerId),
         sellerService.getProductStats(sellerId),
-        sellerService.getSellerPayments(sellerId)
+        sellerService.getSellerPayments({ email: sellerEmail })
       ]);
 
       // 1. Profile

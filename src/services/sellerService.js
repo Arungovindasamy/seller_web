@@ -13,14 +13,18 @@ const checkDev = () => {
     if (meta && meta.env && meta.env.DEV !== undefined) {
       return meta.env.DEV;
     }
-  } catch {}
+  } catch { }
   try {
     if (process.env && process.env.NODE_ENV === "development") {
       return true;
     }
-  } catch {}
+  } catch { }
   return typeof window !== "undefined" && window.location.hostname === "localhost";
 };
+
+//const HAATZA_BASE = "https://haatza.com/_functions";
+const _svcLog = (...a) => { try { if (checkDev()) console.log(...a); } catch { } };
+const _svcErr = (...a) => { try { if (checkDev()) console.error(...a); } catch { } };
 
 const HAATZA_BASE = "https://haatza.com/_functions";
 const HAATZA_SELLER_BASE = "https://haatzaseller.com/_functions";
@@ -62,8 +66,8 @@ export const IN_PROGRESS_STATUSES = ["Draft", "Under Review", "Pending", "Reject
 
 
 /* =============================================================================
-   INTERNAL HELPER FUNCTIONS
-   ============================================================================= */
+  INTERNAL HELPER FUNCTIONS
+  ============================================================================= */
 
 // Centralized resolveSellerId is imported from sellerSession
 
@@ -104,8 +108,8 @@ const resolveImageUrl = (rawImg) => {
 
   if (typeof rawImg === "object" && !Array.isArray(rawImg)) {
     const src =
-      rawImg.url      || rawImg.src      || rawImg.imageUrl ||
-      rawImg.uri      || rawImg.value    || rawImg.mediaUrl ||
+      rawImg.url || rawImg.src || rawImg.imageUrl ||
+      rawImg.uri || rawImg.value || rawImg.mediaUrl ||
       rawImg.filePath || null;
     return resolveImageUrl(src);
   }
@@ -144,15 +148,15 @@ const findImageInItem = (item) => {
   const KNOWN = [
     "subCategoryImage", "subCategoryImg",
     "SubCategoryImage", "SubCategoryImg",
-    "categoryImage",    "categoryImg",
-    "CategoryImage",    "CategoryImg",
-    "image",            "imageUrl",
-    "ImageUrl",         "img",
-    "thumbnail",        "photo",
-    "icon",             "coverImage",
-    "bannerImage",      "mediaUrl",
-    "pictureUrl",       "picture",
-    "logo",             "logoUrl",
+    "categoryImage", "categoryImg",
+    "CategoryImage", "CategoryImg",
+    "image", "imageUrl",
+    "ImageUrl", "img",
+    "thumbnail", "photo",
+    "icon", "coverImage",
+    "bannerImage", "mediaUrl",
+    "pictureUrl", "picture",
+    "logo", "logoUrl",
   ];
 
   for (const key of KNOWN) {
@@ -177,17 +181,17 @@ const findImageInItem = (item) => {
 const normaliseCategory = (item, index) => {
   const name =
     item.categoryName || item.CategoryName ||
-    item.name         || item.title        || "Unnamed";
+    item.name || item.title || "Unnamed";
 
   const id =
     item.categoryId || item.CategoryID ||
-    item.CategoryId || item._id        ||
-    item.id         || `cat-${index}`;
+    item.CategoryId || item._id ||
+    item.id || `cat-${index}`;
 
   const imageUrl = findImageInItem(item);
 
   return {
-    uniqueKey:  `${id}-${index}`,
+    uniqueKey: `${id}-${index}`,
     ...item,
     name,
     CategoryID: String(id),
@@ -199,40 +203,40 @@ const normaliseCategory = (item, index) => {
 const normaliseSubcategory = (item, index) => {
   const name =
     item.subCategoryName || item.SubCategoryName ||
-    item.subCategory     || item.SubCategory     ||
-    item.name            || item.title           || "Unnamed";
+    item.subCategory || item.SubCategory ||
+    item.name || item.title || "Unnamed";
 
   const id =
     item.subCategoryId || item.SubCategoryID ||
-    item.subCategoryID || item._id           ||
-    item.id            || `sub-${index}`;
+    item.subCategoryID || item._id ||
+    item.id || `sub-${index}`;
 
   const imageUrl = findImageInItem(item);
 
   const resolvedCategoryName =
-    item.categoryName      ||
-    item.CategoryName      ||
-    item.category_name     ||
-    item.parentCategory    ||
-    item.parentCategoryName||
-    item.parent            ||
+    item.categoryName ||
+    item.CategoryName ||
+    item.category_name ||
+    item.parentCategory ||
+    item.parentCategoryName ||
+    item.parent ||
     "";
 
   const resolvedCategoryId =
-    item.categoryId   ||
-    item.CategoryID   ||
-    item.CategoryId   ||
-    item.category_id  ||
-    item.parentId     ||
+    item.categoryId ||
+    item.CategoryID ||
+    item.CategoryId ||
+    item.category_id ||
+    item.parentId ||
     item.parentCategoryId ||
     "";
 
   return {
     name,
     SubCategoryID: String(id),
-    uniqueKey:     `${id}-${index}`,
-    categoryId:    String(resolvedCategoryId),
-    categoryName:  resolvedCategoryName,
+    uniqueKey: `${id}-${index}`,
+    categoryId: String(resolvedCategoryId),
+    categoryName: resolvedCategoryName,
     imageUrl,
   };
 };
@@ -306,8 +310,8 @@ const getSellerPinCode = () => {
     if (val && /^\d{6}$/.test(val.trim())) return val.trim();
   }
 
-  const jsonKeys   = ["user", "authUser", "currentUser", "userData", "sellerData"];
-  const pinFields  = ["pinCode", "pincode", "sellerPinCode", "seller_pincode"];
+  const jsonKeys = ["user", "authUser", "currentUser", "userData", "sellerData"];
+  const pinFields = ["pinCode", "pincode", "sellerPinCode", "seller_pincode"];
   for (const store of [sessionStorage, localStorage]) {
     for (const key of jsonKeys) {
       const raw = store.getItem(key);
@@ -318,7 +322,7 @@ const getSellerPinCode = () => {
           const val = parsed?.[field] || parsed?.user?.[field] || parsed?.data?.[field];
           if (val && /^\d{6}$/.test(String(val).trim())) return String(val).trim();
         }
-      } catch {}
+      } catch { }
     }
   }
 
@@ -379,21 +383,21 @@ const unwrapMyListingsEnvelope = (data, fallbackLimit = 10) => {
   if (data?.status && data.status !== "success") {
     const body = data?.message?.body ?? data?.message ?? {};
     const msg =
-      (typeof body?.message === "string" && body.message)     ||
-      (typeof body?.error   === "string" && body.error)       ||
-      (typeof data?.message === "string" && data.message)     ||
-      body?.errorMessage                                       ||
-      body?.reason                                            ||
-      body?.details                                           ||
+      (typeof body?.message === "string" && body.message) ||
+      (typeof body?.error === "string" && body.error) ||
+      (typeof data?.message === "string" && data.message) ||
+      body?.errorMessage ||
+      body?.reason ||
+      body?.details ||
       (typeof body === "object" ? JSON.stringify(body) : String(body)) ||
       "The server returned an error.";
     console.error("[unwrapMyListingsEnvelope] Backend error:", msg, "| Full body:", body);
     throw new Error(msg);
   }
 
-  const body       = data?.message?.body ?? data?.body ?? data ?? {};
+  const body = data?.message?.body ?? data?.body ?? data ?? {};
   const rawProducts = body.sellerProducts ?? body.products ?? body.items ?? [];
-  const products   = rawProducts.map((p) => {
+  const products = rawProducts.map((p) => {
     if (!p) return p;
     const Table_ID = p.Table_ID || p.tableId || p.table_id || p.productId || p._id || p.id || "";
     return {
@@ -404,11 +408,11 @@ const unwrapMyListingsEnvelope = (data, fallbackLimit = 10) => {
   });
   const pagination = body.pagination ?? {};
 
-  const total      = pagination.total      ?? body.total      ?? products.length;
-  const page       = pagination.page       ?? body.page       ?? 1;
-  const limit      = pagination.limit      ?? body.limit      ?? fallbackLimit;
+  const total = pagination.total ?? body.total ?? products.length;
+  const page = pagination.page ?? body.page ?? 1;
+  const limit = pagination.limit ?? body.limit ?? fallbackLimit;
   const totalPages = pagination.totalPages ?? body.totalPages ??
-                     (total > 0 ? Math.ceil(total / limit) : 1);
+    (total > 0 ? Math.ceil(total / limit) : 1);
 
   console.log("[unwrapMyListingsEnvelope] Success:", { products: products.length, total, page, totalPages });
   return { products, total, page, totalPages };
@@ -424,12 +428,12 @@ const unwrapInProgressListingsEnvelope = (data, fallbackLimit = 10) => {
     const body = data?.message?.body ?? data?.message ?? {};
 
     const msg =
-      (typeof body?.message    === "string" && body.message)  ||
-      (typeof body?.error      === "string" && body.error)    ||
-      (typeof data?.message    === "string" && data.message)  ||
-      body?.errorMessage                                       ||
-      body?.reason                                            ||
-      body?.details                                           ||
+      (typeof body?.message === "string" && body.message) ||
+      (typeof body?.error === "string" && body.error) ||
+      (typeof data?.message === "string" && data.message) ||
+      body?.errorMessage ||
+      body?.reason ||
+      body?.details ||
       (typeof body === "object" ? JSON.stringify(body) : String(body)) ||
       "The server returned an error.";
 
@@ -437,9 +441,9 @@ const unwrapInProgressListingsEnvelope = (data, fallbackLimit = 10) => {
     throw new Error(msg);
   }
 
-  const body       = data?.message?.body ?? data?.body ?? data ?? {};
+  const body = data?.message?.body ?? data?.body ?? data ?? {};
   const rawProducts = body.sellerProducts ?? body.products ?? body.items ?? body.data ?? (Array.isArray(body) ? body : []);
-  const products   = rawProducts.map((p) => {
+  const products = rawProducts.map((p) => {
     if (!p) return p;
     const Table_ID = p.Table_ID || p.tableId || p.table_id || p.productId || p._id || p.id || "";
     const productId = p.productId || p.product_id || p.wixProductId || "";
@@ -447,11 +451,11 @@ const unwrapInProgressListingsEnvelope = (data, fallbackLimit = 10) => {
   });
   const pagination = body.pagination ?? {};
 
-  const total      = pagination.total      ?? body.total      ?? products.length;
-  const page       = pagination.page       ?? body.page       ?? 1;
-  const limit      = pagination.limit      ?? body.limit      ?? fallbackLimit;
+  const total = pagination.total ?? body.total ?? products.length;
+  const page = pagination.page ?? body.page ?? 1;
+  const limit = pagination.limit ?? body.limit ?? fallbackLimit;
   const totalPages = pagination.totalPages ?? body.totalPages ??
-                     (total > 0 ? Math.ceil(total / limit) : 1);
+    (total > 0 ? Math.ceil(total / limit) : 1);
 
   console.group("[unwrapInProgressListingsEnvelope] Products received");
   console.log(`Count: ${products.length}, Total: ${total}, Page: ${page}/${totalPages}`);
@@ -465,8 +469,8 @@ const unwrapInProgressListingsEnvelope = (data, fallbackLimit = 10) => {
 
 
 /* =============================================================================
-   // AUTH APIs
-   ============================================================================= */
+  // AUTH APIs
+  ============================================================================= */
 
 export const checkSeller = async (contact) => {
   const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact);
@@ -505,8 +509,8 @@ export const checkSeller = async (contact) => {
 
 
 /* =============================================================================
-   // SELLER PROFILE APIs
-   ============================================================================= */
+  // SELLER PROFILE APIs
+  ============================================================================= */
 
 export const fetchSellerDetails = async (email) => {
   if (!email) throw new Error("Email is required.");
@@ -531,12 +535,12 @@ export const getUserProfile = async (email) => {
 };
 
 export const getCachedSellerId = () => {
-  const CANONICAL_SELLER_KEY  = "__haatza_sellerId";
+  const CANONICAL_SELLER_KEY = "__haatza_sellerId";
   const val =
     sessionStorage.getItem(CANONICAL_SELLER_KEY) ||
-    localStorage.getItem(CANONICAL_SELLER_KEY)   ||
-    sessionStorage.getItem("sellerId")            ||
-    localStorage.getItem("sellerId")              ||
+    localStorage.getItem(CANONICAL_SELLER_KEY) ||
+    sessionStorage.getItem("sellerId") ||
+    localStorage.getItem("sellerId") ||
     "";
   if (!val || val.trim().length < 2) {
     console.warn("[sellerProfileApi] getCachedSellerId: no sellerId found");
@@ -545,12 +549,12 @@ export const getCachedSellerId = () => {
 };
 
 export const getCachedSellerPinCode = () => {
-  const CANONICAL_PIN_KEY     = "__haatza_sellerPinCode";
+  const CANONICAL_PIN_KEY = "__haatza_sellerPinCode";
   const val =
     sessionStorage.getItem(CANONICAL_PIN_KEY) ||
-    localStorage.getItem(CANONICAL_PIN_KEY)   ||
-    sessionStorage.getItem("sellerPinCode")   ||
-    localStorage.getItem("sellerPinCode")     ||
+    localStorage.getItem(CANONICAL_PIN_KEY) ||
+    sessionStorage.getItem("sellerPinCode") ||
+    localStorage.getItem("sellerPinCode") ||
     "";
   if (!val || !/^\d{6}$/.test(val.trim())) {
     console.warn("[sellerProfileApi] getCachedSellerPinCode: invalid or missing pinCode:", val);
@@ -562,8 +566,8 @@ export const getCachedSellerPinCode = () => {
 
 
 /* =============================================================================
-   // CATEGORY APIs
-   ============================================================================= */
+  // CATEGORY APIs
+  ============================================================================= */
 
 export const fetchCategories = async () => {
   try {
@@ -597,14 +601,14 @@ export const fetchSubcategoriesFirstPage = async (categoryId) => {
 
     console.log(`📡 [fetchSubcategoriesFirstPage] top-level keys:`, Object.keys(data));
 
-    const raw        = extractArray(data);
+    const raw = extractArray(data);
     console.log(`📡 [fetchSubcategoriesFirstPage] raw array length: ${raw.length}`);
 
     const normalised = raw.map(normaliseSubcategory);
     console.log(`[fetchSubcategoriesFirstPage] → ${normalised.length} subcategories`);
 
     return {
-      items:   normalised,
+      items: normalised,
       hasMore: normalised.length === 50,
     };
   } catch (err) {
@@ -625,12 +629,12 @@ export const fetchSubcategoriesPaged = async (categoryId, page = 1, limit = 50) 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
-    const raw        = extractArray(data);
+    const raw = extractArray(data);
     const normalised = raw.map(normaliseSubcategory);
     console.log(`[fetchSubcategoriesPaged] page=${page} → ${normalised.length} items`);
 
     return {
-      items:   normalised,
+      items: normalised,
       hasMore: normalised.length === limit,
     };
   } catch (err) {
@@ -651,7 +655,7 @@ export const searchCategories = async (query = "") => {
     const data = await res.json();
 
     const items = extractArray(data);
-    const seen  = new Set();
+    const seen = new Set();
 
     return items
       .filter((item) => {
@@ -662,8 +666,8 @@ export const searchCategories = async (query = "") => {
       })
       .map((item, i) => ({
         CategoryID: item.categoryId || item.CategoryID,
-        name:       item.categoryName || item.CategoryName || "Unnamed",
-        uniqueKey:  `cat-s-${i}`,
+        name: item.categoryName || item.CategoryName || "Unnamed",
+        uniqueKey: `cat-s-${i}`,
       }));
   } catch (err) {
     console.error("[searchCategories]", err);
@@ -709,8 +713,8 @@ export const normalizeSearchText = (text = "") => {
 
 
 /* =============================================================================
-   // GST APIs
-   ============================================================================= */
+  // GST APIs
+  ============================================================================= */
 
 export const checkGSTINExists = async (gstin) => {
   const url = `${GST_API_URL}?gstin=${encodeURIComponent(gstin)}`;
@@ -726,19 +730,19 @@ export const checkGSTINExists = async (gstin) => {
 
   const data = await res.json();
 
-  if (typeof data.exists === "boolean")     return data.exists;
+  if (typeof data.exists === "boolean") return data.exists;
   if (typeof data.registered === "boolean") return data.registered;
-  if (typeof data.found === "boolean")      return data.found;
-  if (data.status === "exists")             return true;
-  if (data.status === "not_found")          return false;
+  if (typeof data.found === "boolean") return data.found;
+  if (data.status === "exists") return true;
+  if (data.status === "not_found") return false;
 
   return false;
 };
 
 
 /* =============================================================================
-   // INVENTORY APIs
-   ============================================================================= */
+  // INVENTORY APIs
+  ============================================================================= */
 
 export const fetchInventoryData = async (sellerId, page = 1, searchText = "", signal = null) => {
   const resolvedSellerId = getOrResolveSellerId(sellerId);
@@ -815,8 +819,8 @@ export const updateInventoryStock = async (sellerId, item, newQty) => {
 
 
 /* =============================================================================
-   // LISTING APIs
-   ============================================================================= */
+  // LISTING APIs
+  ============================================================================= */
 
 export const resolveWixImage = (img) => {
   if (!img) return null;
@@ -845,12 +849,12 @@ export const resolveWixImage = (img) => {
     return raw;
   }
   if (raw.startsWith("wix:image://")) {
-    const withoutScheme  = raw.replace(/^wix:image:\/\//, "");
+    const withoutScheme = raw.replace(/^wix:image:\/\//, "");
     const withoutVersion = withoutScheme.replace(/^v1\//, "");
-    const hashIdx  = withoutVersion.indexOf("#");
+    const hashIdx = withoutVersion.indexOf("#");
     const pathPart = hashIdx !== -1 ? withoutVersion.substring(0, hashIdx) : withoutVersion;
     const pathSegments = pathPart.split("/");
-    let fileId   = pathSegments[0];
+    let fileId = pathSegments[0];
     let fileName = pathSegments[1] || "";
     if (!fileId || fileId.length > 200 || fileId.includes(" ")) return null;
     if (fileId.includes(".")) {
@@ -870,7 +874,7 @@ export const buildMediaItems = (images = []) => {
     .filter((img) => img.mediaUrl || img.url || img.src)
     .map((img) => {
       const url = img.mediaUrl || img.url || img.src || "";
-      
+
       let parsedWixResponse = null;
       if (img.wixResponse) {
         if (typeof img.wixResponse === "object") {
@@ -878,7 +882,7 @@ export const buildMediaItems = (images = []) => {
         } else if (typeof img.wixResponse === "string") {
           try {
             parsedWixResponse = JSON.parse(img.wixResponse);
-          } catch {}
+          } catch { }
         }
       }
 
@@ -886,14 +890,14 @@ export const buildMediaItems = (images = []) => {
         img.wixSrc ||
         parsedWixResponse?.src ||
         (url.startsWith("wix:image://") ? url : toWixSrc(url));
-      
+
       let fileId = "";
       if (wixSrc && wixSrc.startsWith("wix:image://")) {
         const withoutScheme = wixSrc.replace(/^wix:image:\/\//, "");
         const withoutVersion = withoutScheme.replace(/^v1\//, "");
         fileId = withoutVersion.split("/")[0] || "";
       }
-      
+
       if (!fileId) {
         const parts = url.split("/");
         fileId = parts[parts.length - 1].split("?")[0] || "image.jpg";
@@ -934,7 +938,7 @@ export const buildPromotionPhotos = (promotionImage) => {
     } else if (typeof promotionImage.wixResponse === "string") {
       try {
         parsedWixResponse = JSON.parse(promotionImage.wixResponse);
-      } catch {}
+      } catch { }
     }
   }
 
@@ -987,9 +991,9 @@ export const buildDiscount = (formData, discountType = "percent") => {
 export const resolveProductReturn = (val) => {
   if (!val) return "7 Days Easy Return";
   const mapped = {
-    return:             "7 Days Easy Return",
-    no_return:          "No Return",
-    exchange:           "7 Days Exchange",
+    return: "7 Days Easy Return",
+    no_return: "No Return",
+    exchange: "7 Days Exchange",
     return_or_exchange: "7 Days Return or Exchange",
   }[val] || val;
   return mapped.replace(/\breturn\b/g, "Return");
@@ -1040,9 +1044,9 @@ export const buildProductOptions = (optionFields = [], specValues = {}, colourIm
   for (const field of optionFields) {
     const key = field.fieldId || field.title;
     const val = specValues[key];
-    const isColour = field.title.toLowerCase() === "color" || 
-                     field.title.toLowerCase() === "colour" ||
-                     (field.elementType || "").toLowerCase() === "color picker";
+    const isColour = field.title.toLowerCase() === "color" ||
+      field.title.toLowerCase() === "colour" ||
+      (field.elementType || "").toLowerCase() === "color picker";
 
     if (isColour) {
       const colorList = confirmedColors.length > 0 ? confirmedColors : [];
@@ -1052,13 +1056,13 @@ export const buildProductOptions = (optionFields = [], specValues = {}, colourIm
 
       options[field.title] = {
         optionType: "color",
-        name:       field.title,
+        name: field.title,
         choices: finalList.map(c => {
           const colorName = c.name || c;
-          const colorHex  = c.hex  || c;
+          const colorHex = c.hex || c;
           const choice = {
             description: colorName,
-            value:       colorHex,
+            value: colorHex,
           };
           const img = colourImages[colorName];
           if (img) {
@@ -1071,8 +1075,8 @@ export const buildProductOptions = (optionFields = [], specValues = {}, colourIm
                   : [(img?.url || img?.mediaUrl || img?.src || "")].filter(Boolean);
             if (urls.length > 0) {
               choice.mediaItems = urls.map(url => ({
-                id:   url.split("/").pop()?.split("?")[0] || colorName,
-                src:  url,
+                id: url.split("/").pop()?.split("?")[0] || colorName,
+                src: url,
                 type: "image",
               }));
             }
@@ -1086,10 +1090,10 @@ export const buildProductOptions = (optionFields = [], specValues = {}, colourIm
       if (selected.length === 0) continue;
       options[field.title] = {
         optionType: "drop_down",
-        name:       field.title,
+        name: field.title,
         choices: selected.map(v => ({
           description: String(v),
-          value:       String(v),
+          value: String(v),
         })),
       };
     }
@@ -1135,7 +1139,7 @@ export const createListing = async (payload) => {
   });
 
   let data = {};
-  try { data = await res.json(); } catch {}
+  try { data = await res.json(); } catch { }
 
   console.group("[createListing] Response diagnostics");
   console.log("HTTP status:", res.status);
@@ -1151,8 +1155,8 @@ export const createListing = async (payload) => {
   const body =
     data?.message?.data ??
     data?.message?.body ??
-    data?.body          ??
-    data               ??
+    data?.body ??
+    data ??
     {};
 
   if (data?.status && data.status !== "success") {
@@ -1179,7 +1183,7 @@ export const updateListing = async (payload) => {
   });
 
   let data = {};
-  try { data = await res.json(); } catch {}
+  try { data = await res.json(); } catch { }
 
   console.group("[updateListing] Response diagnostics");
   console.log("HTTP status:", res.status);
@@ -1518,6 +1522,34 @@ export const normalizeSettlementSummary = (response) => {
   };
 };
 
+export const getSettlementSummary = async ({
+  orderAmount,
+  categoryId,
+  deliveryCharges,
+  shippingWeight,
+  sellerPinCode,
+  sellerId,
+}) => {
+  if (!sellerId) throw new Error("Missing sellerId for settlementsummary");
+
+  const params = {
+    orderAmount,
+    categoryId,
+    deliveryCharges,
+    shippingWeight,
+    sellerPinCode,
+    sellerId,
+  };
+
+  console.log("[SettlementsPage] Settlement Summary Params", params);
+
+  const res = await axios.get(`${HAATZA_BASE}/settlementsummary`, { params });
+
+  console.log("[SettlementsPage] Settlement Summary Response", res.data);
+
+  return res.data;
+};
+
 export const fetchSettlementSummary = async ({
   orderAmount,
   categoryId,
@@ -1545,29 +1577,26 @@ export const fetchSettlementSummary = async ({
     throw new Error("sellerPinCode is required for settlement summary.");
   }
 
-  const response = await axios.get(`${API_BASE_URL}/settlementsummary`, {
-    params: {
-      orderAmount,
-      categoryId,
-      deliveryCharges: Boolean(deliveryCharges),
-      shippingWeight,
-      sellerPinCode: resolvedPin,
-      sellerId: resolvedSellerId,
-    },
-    timeout: 15000,
+  const data = await getSettlementSummary({
+    orderAmount,
+    categoryId,
+    deliveryCharges: Boolean(deliveryCharges),
+    shippingWeight,
+    sellerPinCode: resolvedPin,
+    sellerId: resolvedSellerId,
   });
 
-  return normalizeSettlementSummary(response.data);
+  return normalizeSettlementSummary(data);
 };
 
 
 /* =============================================================================
-   // MY LISTINGS APIs
-   ============================================================================= */
+  // MY LISTINGS APIs
+  ============================================================================= */
 
 export const fetchSellerListings = async ({
   email,
-  page  = 1,
+  page = 1,
   limit = 10,
   type,
 } = {}) => {
@@ -1577,7 +1606,7 @@ export const fetchSellerListings = async ({
 
   const params = {
     email: email.trim(),
-    page:  Number(page)  || 1,
+    page: Number(page) || 1,
     limit: Number(limit) || 10,
   };
   if (type) params.type = type;
@@ -1592,15 +1621,15 @@ export const fetchSellerListings = async ({
     if (!err.response) {
       throw err;
     }
-    const body    = err.response.data;
+    const body = err.response.data;
     const errBody = body?.message?.body ?? body?.message ?? body ?? {};
     const message =
       (typeof errBody?.message === "string" && errBody.message) ||
-      (typeof errBody?.error   === "string" && errBody.error)   ||
-      (typeof body?.message    === "string" && body.message)    ||
-      (typeof body?.error      === "string" && body.error)      ||
-      errBody?.errorMessage                                      ||
-      err.message                                               ||
+      (typeof errBody?.error === "string" && errBody.error) ||
+      (typeof body?.message === "string" && body.message) ||
+      (typeof body?.error === "string" && body.error) ||
+      errBody?.errorMessage ||
+      err.message ||
       "Unable to load listings. Please try again.";
     throw new Error(message);
   }
@@ -1671,12 +1700,12 @@ export const fetchProductDetails = async (tableId) => {
     return normalised;
   } catch (err) {
     if (!err.response) throw err;
-    const body    = err.response.data;
+    const body = err.response.data;
     const errBody = body?.message?.body ?? body?.message ?? body ?? {};
     const message =
       (typeof errBody?.message === "string" && errBody.message) ||
-      (typeof body?.error      === "string" && body.error)      ||
-      err.message                                               ||
+      (typeof body?.error === "string" && body.error) ||
+      err.message ||
       "Unable to fetch product details.";
     throw new Error(message);
   }
@@ -1684,7 +1713,7 @@ export const fetchProductDetails = async (tableId) => {
 
 export const fetchInProgressListings = async ({
   email,
-  page  = 1,
+  page = 1,
   limit = 10,
 } = {}) => {
   if (!email?.trim()) {
@@ -1702,7 +1731,7 @@ export const fetchInProgressListings = async ({
         const val = parsed?.sellerId || parsed?.seller_id || parsed?.userId || parsed?.user_id
           || parsed?.user?.sellerId || parsed?.data?.sellerId || null;
         if (val) return String(val).trim();
-      } catch {}
+      } catch { }
     }
     return "";
   };
@@ -1710,11 +1739,11 @@ export const fetchInProgressListings = async ({
   const resolvedSellerId = resolveStoredSellerId();
 
   const params = {
-    email:       email.trim(),
+    email: email.trim(),
     sellerEmail: email.trim(),
-    page:        Number(page)  || 1,
-    limit:       Number(limit) || 10,
-    sellerId:    resolvedSellerId || "",
+    page: Number(page) || 1,
+    limit: Number(limit) || 10,
+    sellerId: resolvedSellerId || "",
   };
 
   try {
@@ -1745,16 +1774,16 @@ export const fetchInProgressListings = async ({
       throw err;
     }
 
-    const body    = err.response.data;
+    const body = err.response.data;
     const errBody = body?.message?.body ?? body?.message ?? body ?? {};
     const message =
       (typeof errBody?.message === "string" && errBody.message) ||
-      (typeof errBody?.error   === "string" && errBody.error)   ||
-      (typeof body?.message    === "string" && body.message)    ||
-      (typeof body?.error      === "string" && body.error)      ||
-      errBody?.errorMessage                                      ||
-      errBody?.reason                                           ||
-      err.message                                               ||
+      (typeof errBody?.error === "string" && errBody.error) ||
+      (typeof body?.message === "string" && body.message) ||
+      (typeof body?.error === "string" && body.error) ||
+      errBody?.errorMessage ||
+      errBody?.reason ||
+      err.message ||
       "Unable to load in-progress listings. Please try again.";
 
     throw new Error(message);
@@ -1830,12 +1859,12 @@ export const fetchInProgressProductDetails = async (tableId) => {
     return normalised;
   } catch (err) {
     if (!err.response) throw err;
-    const body    = err.response.data;
+    const body = err.response.data;
     const errBody = body?.message?.body ?? body?.message ?? body ?? {};
     const message =
       (typeof errBody?.message === "string" && errBody.message) ||
-      (typeof body?.error      === "string" && body.error)      ||
-      err.message                                               ||
+      (typeof body?.error === "string" && body.error) ||
+      err.message ||
       "Unable to fetch product details.";
     throw new Error(message);
   }
@@ -1843,8 +1872,8 @@ export const fetchInProgressProductDetails = async (tableId) => {
 
 
 /* =============================================================================
-   // ONBOARD STATUS APIs
-   ============================================================================= */
+  // ONBOARD STATUS APIs
+  ============================================================================= */
 
 export const checkOnboardStatus = async (contact) => {
   if (!contact) {
@@ -1890,17 +1919,17 @@ export const checkOnboardStatus = async (contact) => {
   if (typeof rawStatus === "string") {
     const s = rawStatus.toLowerCase().trim();
 
-    const ACTIVE_VALUES   = new Set(["active", "completed", "complete", "done"]);
+    const ACTIVE_VALUES = new Set(["active", "completed", "complete", "done"]);
     const INACTIVE_VALUES = new Set(["inactive", "incomplete", "pending", "not_completed"]);
 
-    if (ACTIVE_VALUES.has(s))   return true;
+    if (ACTIVE_VALUES.has(s)) return true;
     if (INACTIVE_VALUES.has(s)) return false;
 
     console.warn("checkOnboardStatus: unrecognised status string:", s, "| full response:", data);
     return false;
   }
 
-  if (typeof data.active    === "boolean") return data.active;
+  if (typeof data.active === "boolean") return data.active;
   if (typeof data.completed === "boolean") return data.completed;
   if (typeof data.onboarded === "boolean") return data.onboarded;
 
@@ -1910,8 +1939,8 @@ export const checkOnboardStatus = async (contact) => {
 
 
 /* =============================================================================
-   // OTP APIs
-   ============================================================================= */
+  // OTP APIs
+  ============================================================================= */
 
 export const generateOtp = async (phone) => {
   const res = await fetch(`${SELLER_BASE_URL}/generateotp`, {
@@ -1975,8 +2004,8 @@ export const resendOtp = async (phone) => {
 
 
 /* =============================================================================
-   // REGISTER APIs
-   ============================================================================= */
+  // REGISTER APIs
+  ============================================================================= */
 
 export const registerUser = async ({ fullName, phone, email, password }) => {
   if (!fullName?.trim()) {
@@ -2058,8 +2087,8 @@ export const registerUser = async ({ fullName, phone, email, password }) => {
 
 
 /* =============================================================================
-   // SPECIFICATION APIs
-   ============================================================================= */
+  // SPECIFICATION APIs
+  ============================================================================= */
 
 export const fetchCategoryFields = async (categoryId) => {
   let res;
@@ -2083,8 +2112,8 @@ export const fetchCategoryFields = async (categoryId) => {
 
 
 /* =============================================================================
-   // WALLET APIs
-   ============================================================================= */
+  // WALLET APIs
+  ============================================================================= */
 
 export const walletService = {
   checkWalletBalance: async (sellerId) => {
@@ -2110,18 +2139,59 @@ export const walletService = {
   },
 
   addFunds: async (payload) => {
-    const res = await axios.post(`${API_BASE_URL}/addFunds`, payload);
-    return res.data;
+    _svcLog("[sellerService] addFunds payload:", payload);
+    try {
+      const res = await axios.post(`${API_BASE_URL}/addFunds`, payload, {
+        headers: { "Content-Type": "application/json" },
+        timeout: 15000,
+      });
+      _svcLog("[sellerService] addFunds response:", res.data);
+      return res.data;
+    } catch (err) {
+      _svcErr("[sellerService] addFunds NETWORK ERROR:", err?.message, err?.response?.status, err?.response?.data);
+      throw err;
+    }
   },
-
   createRazorpayOrder: async (payload) => {
     const res = await axios.post(`${API_BASE_URL}/createRazorpayOrder`, payload);
     return res.data;
   },
 
   verifyRazorpayPayment: async (payload) => {
-    const res = await axios.post(`${API_BASE_URL}/verifyRazorpayPayment`, payload);
-    return res.data;
+    console.log("[sellerService] verifyRazorpayPayment payload:", payload);
+
+    try {
+      const res = await axios.post(
+        `${API_BASE_URL}/verifyRazorpayPayment`,
+        payload,
+        {
+          headers: { "Content-Type": "application/json" },
+          timeout: 20000,
+          validateStatus: () => true
+        }
+      );
+
+      console.log("[sellerService] verifyRazorpayPayment status:", res.status);
+      console.log("[sellerService] verifyRazorpayPayment response:", res.data);
+
+      if (res.status < 200 || res.status >= 300) {
+        const msg =
+          res.data?.message ||
+          res.data?.error ||
+          `verifyRazorpayPayment failed with HTTP ${res.status}`;
+        throw new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
+      }
+
+      return res.data;
+    } catch (err) {
+      console.error(
+        "[sellerService] verifyRazorpayPayment failed:",
+        err?.message,
+        err?.response?.status,
+        err?.response?.data
+      );
+      throw err;
+    }
   },
 
   getCampaignSummary: async (sellerId) => {
@@ -2285,21 +2355,30 @@ export const getSellerNewOrders = async (sellerId) => {
   }
 };
 
-export const getSellerPayments = async (sellerId) => {
-  try {
-    const resolvedEmail = resolveSellerEmailForApi();
-    if (!resolvedEmail) {
-      throw new Error("Seller email not found. Please login again.");
-    }
-    const response = await axios.get(`${API_BASE_URL}/sellerpayments`, {
-      params: { email: resolvedEmail },
-      timeout: 15000,
-    });
-    return response.data;
-  } catch (error) {
-    console.warn("[API Failed]", "getSellerPayments", error.response?.status, error.response?.data || error.message);
-    return { status: "success", data: [], message: [] };
-  }
+export const getSellerPayments = async (arg = {}, config = {}) => {
+  const paramsInput = typeof arg === "string" ? { email: resolveSellerEmailForApi() || "" } : arg;
+  const { email: sellerEmail, fromDate, toDate, count = 50, lastFetched = 0 } = paramsInput;
+
+  if (!sellerEmail) throw new Error("Missing seller email for sellerpayments");
+
+  const params = {
+    email: sellerEmail,
+    fromDate,
+    toDate,
+    count,
+    lastFetched,
+  };
+
+  console.log("[SettlementsPage] sellerpayments params", params);
+
+  const res = await axios.get("https://haatza.com/_functions/sellerpayments", {
+    params,
+    ...config,
+  });
+
+  console.log("[SettlementsPage] Seller Payments Response", res.data);
+
+  return res.data;
 };
 
 export const getSellerConfirmedOrdersCount = async (sellerId) => {
@@ -2390,30 +2469,43 @@ export const fetchWalletTransactions = async (sellerId) => {
   }
 };
 
-export const addFundsToWallet = async (sellerId, amount) => {
+export const addFundsToWallet = async (sellerId, amount, razorpayResponse = {}) => {
   const resolvedSellerId = getOrResolveSellerId(sellerId);
+
+  const payload = {
+    sellerId: resolvedSellerId,
+    amountAdded: Number(amount),
+    paymentId: razorpayResponse.razorpay_payment_id || razorpayResponse.paymentId
+  };
+
+  console.log("[WalletPage] Add Funds Payload", payload);
+
   try {
-    const response = await axios.post(`${API_BASE_URL}/addFunds`, {
-      sellerId: resolvedSellerId,
-      amount: Number(amount),
-    }, {
+    const response = await axios.post(`${API_BASE_URL}/addFunds`, payload, {
       headers: { "Content-Type": "application/json" },
-      timeout: 10_000,
+      timeout: 15000,
     });
-    if (response.data?.status === "success") {
-      return response.data;
-    }
-    throw new Error(response.data?.message || "Failed to credit funds.");
+
+    console.log("[WalletPage] Add Funds Response", response.data);
+
+    return response.data;
   } catch (err) {
-    console.error("[addFundsToWallet] Error adding funds:", err);
-    throw new Error(err.response?.data?.message || "Failed to complete transaction.");
+    console.error(
+      "[addFundsToWallet] Error:",
+      err?.response?.status,
+      err?.response?.data || err.message
+    );
+
+    throw new Error(
+      err.response?.data?.error ||
+      err.response?.data?.message ||
+      "Failed to complete wallet credit."
+    );
   }
 };
-
-
 /* =============================================================================
-   // ADVERTISEMENT APIs
-   ============================================================================= */
+  // ADVERTISEMENT APIs
+  ============================================================================= */
 
 export const getAdvertisements = async (sellerId) => {
   const resolvedSellerId = getOrResolveSellerId(sellerId);
@@ -2473,7 +2565,7 @@ export const getCampaignSummary = async (sellerId) => {
 export const getAdvertisementPerformance = async (sellerId, campaignId, fromAndToDate = "") => {
   const resolvedSellerId = getOrResolveSellerId(sellerId);
   const params = { tableId: campaignId, sellerId: resolvedSellerId };
-  
+
   let parsedParams = { ...params };
   if (fromAndToDate) {
     if (typeof fromAndToDate === "string") {
@@ -2585,12 +2677,12 @@ export const getNotPromotedProducts = async (sellerId) => {
   if (!email) {
     return { status: "success", data: [], products: [] };
   }
-  
+
   const productsResponse = await axios.get(`${API_BASE_URL}/seller_products`, {
     params: { email, page: 1, limit: 100 },
     timeout: 15000,
   });
-  
+
   let promotedList = [];
   try {
     const promotedResponse = await axios.get(`${API_BASE_URL}/sellerCampaignsproducts`, {
@@ -2681,8 +2773,8 @@ export const deleteCampaign = async (id, sellerId = null) => {
 
 
 /* =============================================================================
-   // HAATZUP APIs
-   ============================================================================= */
+  // HAATZUP APIs
+  ============================================================================= */
 
 export const getSellerHaatzupProducts = async (sellerId, page = 1, limit = 15) => {
   const resolvedSellerId = getOrResolveSellerId(sellerId);
@@ -2770,11 +2862,11 @@ export const getHaatzUpSummary = async (sellerId) => {
     const response = await getSellerwiseHaatzUp(sellerId);
     const videos = response?.data || response?.message?.videos || response?.videos || [];
     const videosList = Array.isArray(videos) ? videos : [];
-    
+
     const totalViews = videosList.reduce((sum, v) => sum + Number(v.views || v.totalViews || 0), 0);
     const totalLikes = videosList.reduce((sum, v) => sum + Number(v.likes || v.totalLikes || 0), 0);
     const totalComments = videosList.reduce((sum, v) => sum + Number(v.comments || v.totalComments || 0), 0);
-    
+
     return {
       status: "success",
       data: {
@@ -2804,8 +2896,8 @@ export const uploadHaatzUpReel = uploadHaatzupVideo;
 
 
 /* =============================================================================
-   // NOTIFICATION APIs
-   ============================================================================= */
+  // NOTIFICATION APIs
+  ============================================================================= */
 
 export const getNotifications = async (sellerId) => {
   try {
@@ -2869,8 +2961,8 @@ export const fetchNotificationsList = async (sellerId) => {
 
 
 /* =============================================================================
-   // AUDITED BACKEND API INTEGRATIONS
-   ============================================================================= */
+  // AUDITED BACKEND API INTEGRATIONS
+  ============================================================================= */
 
 export const fetchPricingplans = async () => {
   const response = await axios.get(`${PROFILE_BASE_URL}/getPlans`, { timeout: 15000 });
@@ -3082,8 +3174,8 @@ export const fetchSellerOrders = async (sellerId, fromdate, toDate, page = 1, co
 
 
 /* =============================================================================
-   // EXTRA SYSTEM / COMPATIBILITY APIs
-   ============================================================================= */
+  // EXTRA SYSTEM / COMPATIBILITY APIs
+  ============================================================================= */
 
 export const getDashboardDrawerMenu = async () => {
   return {
@@ -3111,8 +3203,8 @@ export const getDashboardDrawerMenu = async () => {
 
 
 /* =============================================================================
-   DUAL PATTERN EXPORTS
-   ============================================================================= */
+  DUAL PATTERN EXPORTS
+  ============================================================================= */
 
 export const sellerService = {
   fetchInventoryData,
@@ -3167,6 +3259,7 @@ export const sellerService = {
   buildCreatePayload,
   buildUpdatePayload,
   fetchSettlementSummary,
+  getSettlementSummary,
   normalizeSettlementSummary,
   resolveWixImage,
   buildMediaItems,
@@ -3241,6 +3334,7 @@ export const sellerService = {
   fetchSellerOrders
 };
 
+
 export const advertisementService = {
   getAdvertisementSummary,
   getCampaigns,
@@ -3271,6 +3365,7 @@ export {
   ADD_FUNDS_API,
   NOTIFICATIONS_API,
   UPDATE_NOTIFICATION_API,
+
 };
 
 export default sellerService;

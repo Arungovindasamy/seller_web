@@ -1,13 +1,19 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Search, Calendar, ChevronDown, X, Info, AlertTriangle, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { sellerService } from "../../services/sellerService";
-import { resolveSellerId } from "../../utils/sellerSession";
+import { resolveSellerId, resolveSellerEmail } from "../../utils/sellerSession";
 import "./SettlementsPage.css";
 
 const formatCurrency = (value) => {
   const amount = Number(value);
   return `₹${Number.isFinite(amount) ? amount.toFixed(2) : "0.00"}`;
 };
+
+// Module-level cache for request deduplication and last fetched parameter key
+// eslint-disable-next-line no-unused-vars
+const activeRequests = new Map();
+// eslint-disable-next-line no-unused-vars
+const lastFetchedParams = { key: null };
 
 const SettlementsPage = () => {
   const [rawTransactions, setRawTransactions] = useState([]);
@@ -19,27 +25,164 @@ const SettlementsPage = () => {
   const [settlementSummary, setSettlementSummary] = useState(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
 
-  // Date Picker Modal State
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState(new Date(2026, 5)); // June 2026 (matching screenshots)
-  const [selectedDay, setSelectedDay] = useState(13); // Default to 13th June
+  const abortControllerRef = useRef(null);
+
+  // Clean up abort controller on unmount
+  useEffect(() => {
+    return () => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const controller = abortControllerRef.current;
+      if (controller) {
+        controller.abort();
+      }
+    };
+  }, []);
+
+  // Helper to format Date to YYYY-MM-DD
+  const formatDateString = useCallback((date) => {
+    if (!date) return "";
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }, []);
+
+  // Date Range States
+  const [selectedFromDate, setSelectedFromDate] = useState(() => {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), 1);
+  });
+  const [selectedToDate, setSelectedToDate] = useState(() => {
+    return new Date();
+  });
+  const [isDateRangeOpen, setIsDateRangeOpen] = useState(false);
+
+  // Active filter state used for API calls
+  const [appliedFromDate, setAppliedFromDate] = useState(selectedFromDate);
+  const [appliedToDate, setAppliedToDate] = useState(selectedToDate);
+
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date());
+
+  useEffect(() => {
+    if (isDateRangeOpen) {
+      setSelectedFromDate(appliedFromDate);
+      setSelectedToDate(appliedToDate);
+    }
+  }, [isDateRangeOpen, appliedFromDate, appliedToDate]);
+
+  const dateFilterLabel = useMemo(() => {
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    const isDefault = 
+      appliedFromDate.getDate() === firstDay.getDate() &&
+      appliedFromDate.getMonth() === firstDay.getMonth() &&
+      appliedFromDate.getFullYear() === firstDay.getFullYear() &&
+      appliedToDate.getDate() === today.getDate() &&
+      appliedToDate.getMonth() === today.getMonth() &&
+      appliedToDate.getFullYear() === today.getFullYear();
+
+    if (isDefault) {
+      return "This Month";
+    }
+
+    const options = { day: "2-digit", month: "short", year: "numeric" };
+    return `${appliedFromDate.toLocaleDateString("en-US", options)} - ${appliedToDate.toLocaleDateString("en-US", options)}`;
+  }, [appliedFromDate, appliedToDate]);
 
   // Fetch data
-  const loadSettlements = useCallback(async () => {
+  const loadSettlements = useCallback(async (force = false) => {
+    const email = (resolveSellerEmail() || "").trim();
+    const fromStr = formatDateString(appliedFromDate);
+    const toStr = formatDateString(appliedToDate);
+    const paramKey = `${email}_${fromStr}_${toStr}`;
+
+    if (!force && lastFetchedParams.key === paramKey) {
+      console.log("[SettlementsPage] API AUDIT - blocked unnecessary refetch");
+      return;
+    }
+
+    if (!force && activeRequests.has(paramKey)) {
+      console.log("[SettlementsPage] API AUDIT - skipped duplicate request");
+      return;
+    }
+
+    // Cancel previous request if any
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setLoading(true);
     setError(null);
+    activeRequests.set(paramKey, controller);
+
+    console.log("[SettlementsPage] API AUDIT - called sellerpayments");
+
     try {
-      const response = await sellerService.getSellerPayments();
-      const list = response?.message?.data || response?.data || response?.message || response || [];
-      setRawTransactions(Array.isArray(list) ? list : []);
+      const response = await sellerService.getSellerPayments({
+        email,
+        fromDate: fromStr,
+        toDate: toStr,
+        count: 50,
+        lastFetched: 0,
+      }, { signal: controller.signal });
+
+      lastFetchedParams.key = paramKey;
+
+      // Safe response parsing
+      let list = [];
+      if (response) {
+        if (response.message?.payments?.data && Array.isArray(response.message.payments.data)) {
+          list = response.message.payments.data;
+        } else if (response.message?.payments && Array.isArray(response.message.payments)) {
+          list = response.message.payments;
+        } else if (response.message?.data && Array.isArray(response.message.data)) {
+          list = response.message.data;
+        } else if (response.payments && Array.isArray(response.payments)) {
+          list = response.payments;
+        } else if (response.message && Array.isArray(response.message)) {
+          list = response.message;
+        } else if (response.data && Array.isArray(response.data)) {
+          list = response.data;
+        } else if (Array.isArray(response)) {
+          list = response;
+        }
+      }
+
+      setRawTransactions(list);
     } catch (err) {
+      if (err.name === "CanceledError" || err.name === "AbortError" || err.message === "canceled" || err.code === "ERR_CANCELED") {
+        return;
+      }
       console.error("[SettlementsPage] Load error:", err);
-      setError(err.message || "Failed to load settlements from server.");
+      
+      const is400 = err.response?.status === 400;
+      if (is400) {
+        const fullUrl = err.config?.url || "https://haatza.com/_functions/sellerpayments";
+        const payload = err.config?.params || {
+          email,
+          fromDate: fromStr,
+          toDate: toStr,
+          count: 50,
+          lastFetched: 0
+        };
+        console.error("[SettlementsPage] Seller Payments 400 Bad Request", {
+          url: fullUrl,
+          payload: payload,
+          responseData: err.response?.data
+        });
+        setError("Failed to load settlements: Invalid request configuration (400 Bad Request). Please check parameters.");
+      } else {
+        setError(err.message || "Failed to load settlements from server.");
+      }
       setRawTransactions([]);
     } finally {
+      activeRequests.delete(paramKey);
       setLoading(false);
     }
-  }, []);
+  }, [appliedFromDate, appliedToDate, formatDateString]);
 
   useEffect(() => {
     loadSettlements();
@@ -107,7 +250,7 @@ const SettlementsPage = () => {
     });
   }, [mappedTransactions, activeTab, search]);
 
-  const handleOpenDetails = async (tx) => {
+  const handleOpenDetails = useCallback(async (tx) => {
     setSelectedTx(tx);
     setSettlementSummary(null);
     setLoadingSummary(true);
@@ -156,10 +299,7 @@ const SettlementsPage = () => {
       sellerId: resolvedSellerId,
     };
 
-    // Debug logging (Task 6)
-    if (process.env.NODE_ENV === "development" || window.location.hostname === "localhost") {
-      console.log("[SettlementsPage] settlement request params", params);
-    }
+    console.log("[SettlementsPage] API AUDIT - called settlementsummary");
 
     try {
       const normalizedData = await sellerService.fetchSettlementSummary(params);
@@ -177,7 +317,7 @@ const SettlementsPage = () => {
     } finally {
       setLoadingSummary(false);
     }
-  };
+  }, []);
 
   const handleCloseDetails = () => {
     setSelectedTx(null);
@@ -191,6 +331,33 @@ const SettlementsPage = () => {
 
   const handleNextMonth = () => {
     setSelectedMonth(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1));
+  };
+
+  const handleDayClick = (dayNum) => {
+    const clickedDate = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), dayNum);
+
+    if (!selectedFromDate || (selectedFromDate && selectedToDate)) {
+      setSelectedFromDate(clickedDate);
+      setSelectedToDate(null);
+    } else {
+      if (clickedDate < selectedFromDate) {
+        setSelectedToDate(selectedFromDate);
+        setSelectedFromDate(clickedDate);
+      } else {
+        setSelectedToDate(clickedDate);
+      }
+    }
+  };
+
+  const handleConfirmDates = () => {
+    let finalToDate = selectedToDate;
+    if (!finalToDate) {
+      finalToDate = selectedFromDate;
+      setSelectedToDate(selectedFromDate);
+    }
+    setAppliedFromDate(selectedFromDate);
+    setAppliedToDate(finalToDate);
+    setIsDateRangeOpen(false);
   };
 
   const getDaysInMonth = (date) => {
@@ -251,29 +418,34 @@ const SettlementsPage = () => {
               <button
                 type="button"
                 className="btn-date-filter"
-                onClick={() => setShowDatePicker(prev => !prev)}
+                onClick={() => setIsDateRangeOpen(prev => !prev)}
               >
                 <Calendar size={16} />
-                <span>{selectedDay} {selectedMonth.toLocaleDateString("en-US", { month: "short" })} {selectedMonth.getFullYear()}</span>
-                <ChevronDown size={14} className={`chevron ${showDatePicker ? "rotate" : ""}`} />
+                <span>{dateFilterLabel}</span>
+                <ChevronDown size={14} className={`chevron ${isDateRangeOpen ? "rotate" : ""}`} />
               </button>
 
               {/* Floating Date Picker Dropdown */}
-              {showDatePicker && (
+              {isDateRangeOpen && (
                 <div className="datepicker-popover">
-                  <div className="datepicker-header">
-                    <button type="button" onClick={handlePrevMonth} className="btn-nav-cal">
-                      <ChevronLeft size={16} />
-                    </button>
+                  <div className="datepicker-title" style={{ textAlign: "center", fontWeight: "700", fontSize: "15px", marginBottom: "12px", color: "#111827" }}>
+                    Select Date Range
+                  </div>
+                  <div className="datepicker-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
                     <span className="calendar-month-year">{monthYearLabel}</span>
-                    <button type="button" onClick={handleNextMonth} className="btn-nav-cal">
-                      <ChevronRight size={16} />
-                    </button>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button type="button" onClick={handlePrevMonth} className="btn-nav-cal">
+                        <ChevronLeft size={16} />
+                      </button>
+                      <button type="button" onClick={handleNextMonth} className="btn-nav-cal">
+                        <ChevronRight size={16} />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="calendar-weekdays">
                     {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
-                      <span key={i} className="weekday-label">{d}</span>
+                      <span key={i} className="weekday-label" style={d === "F" ? { color: "#2962ff" } : {}}>{d}</span>
                     ))}
                   </div>
 
@@ -286,16 +458,29 @@ const SettlementsPage = () => {
                     {/* Render days of month */}
                     {Array.from({ length: daysCount }).map((_, i) => {
                       const dayNum = i + 1;
-                      const isSelected = dayNum === selectedDay;
+                      const currentDayDate = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), dayNum);
+                      
+                      const isSelectedStart = selectedFromDate && currentDayDate.getTime() === selectedFromDate.getTime();
+                      const isSelectedEnd = selectedToDate && currentDayDate.getTime() === selectedToDate.getTime();
+                      const isInRange = selectedFromDate && selectedToDate && 
+                                        currentDayDate.getTime() > selectedFromDate.getTime() && 
+                                        currentDayDate.getTime() < selectedToDate.getTime();
+
+                      let btnClass = "calendar-day-btn";
+                      if (isSelectedStart) {
+                        btnClass += " calendar-day-btn--range-start";
+                      } else if (isSelectedEnd) {
+                        btnClass += " calendar-day-btn--range-end";
+                      } else if (isInRange) {
+                        btnClass += " calendar-day-btn--in-range";
+                      }
+
                       return (
                         <button
                           key={dayNum}
                           type="button"
-                          className={`calendar-day-btn ${isSelected ? "calendar-day-btn--active" : ""}`}
-                          onClick={() => {
-                            setSelectedDay(dayNum);
-                            setShowDatePicker(false);
-                          }}
+                          className={btnClass}
+                          onClick={() => handleDayClick(dayNum)}
                         >
                           {dayNum}
                         </button>
@@ -307,7 +492,7 @@ const SettlementsPage = () => {
                     <button
                       type="button"
                       className="datepicker-btn-confirm"
-                      onClick={() => setShowDatePicker(false)}
+                      onClick={handleConfirmDates}
                     >
                       Confirm
                     </button>
@@ -316,7 +501,7 @@ const SettlementsPage = () => {
               )}
             </div>
 
-            <button type="button" className="btn-refresh" onClick={loadSettlements} title="Refresh Payouts">
+            <button type="button" className="btn-refresh" onClick={() => loadSettlements(true)} title="Refresh Payouts">
               <RefreshCw size={16} />
             </button>
           </div>

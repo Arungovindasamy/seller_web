@@ -98,7 +98,8 @@ function SignInPage() {
       // Pre-fetch profile to resolve and store sellerId
       try {
         const profileRes = await getUserProfile(emailForStatus);
-        const p = profileRes?.message || profileRes?.data || profileRes || {};
+        const rawMsg = profileRes?.message;
+        const p = Array.isArray(rawMsg) ? (rawMsg[0] || {}) : (profileRes?.data || profileRes || {});
         const foundSellerId = p.sellerId || p.seller_id || p.uid || p.id;
         if (foundSellerId) {
           const sid = String(foundSellerId).trim();

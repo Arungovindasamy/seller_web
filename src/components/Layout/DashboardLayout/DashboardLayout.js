@@ -4,18 +4,18 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { sellerService } from "../../../services/sellerService";
 import { getSellerId } from "../../../utils/sellerSession";
 
-import HaatzaNavbar  from "../Navbar/Navbar";
-import Sidebar       from "../Sidebar/Sidebar";
+import HaatzaNavbar from "../Navbar/Navbar";
+import Sidebar from "../Sidebar/Sidebar";
 import "./DashboardLayout.css";
 
 // ─── Read the real seller email from auth sources ─────────────────────────────
 const resolveSellerEmail = (locationState) => {
   if (locationState?.email &&
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(locationState.email)) {
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(locationState.email)) {
     const e = locationState.email.trim().toLowerCase();
     console.log("[DashboardLayout] ✅ Email from location.state:", e);
     sessionStorage.setItem("pendingEmail", e);
-    localStorage.setItem("userEmail",      e);
+    localStorage.setItem("userEmail", e);
     return e;
   }
 
@@ -30,7 +30,7 @@ const resolveSellerEmail = (locationState) => {
   }
 
   const localKeys = ["userEmail", "email", "sellerEmail",
-                     "user", "authUser", "currentUser", "seller"];
+    "user", "authUser", "currentUser", "seller"];
   for (const key of localKeys) {
     const raw = localStorage.getItem(key);
     if (!raw) continue;
@@ -41,7 +41,7 @@ const resolveSellerEmail = (locationState) => {
     }
     try {
       const parsed = JSON.parse(raw);
-      const found  = parsed?.email || parsed?.userEmail || parsed?.sellerEmail;
+      const found = parsed?.email || parsed?.userEmail || parsed?.sellerEmail;
       if (found && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(found)) {
         const e = found.trim().toLowerCase();
         console.log(`[DashboardLayout] ✅ Email from localStorage[${key}].email:`, e);
@@ -68,7 +68,8 @@ const useSellerDisplayData = (resolvedEmail) => {
     setLoadingProfile(true);
     sellerService.getUserProfile(resolvedEmail)
       .then((res) => {
-        const p = res?.message || res?.data || res || {};
+        const rawMsg = res?.message;
+        const p = Array.isArray(rawMsg) ? (rawMsg[0] || {}) : (res?.data || res || {});
         const foundSellerId = p.sellerId || p.seller_id || p.uid || p.id;
         if (foundSellerId) {
           const sid = String(foundSellerId).trim();
@@ -109,11 +110,11 @@ function DashboardLayout() {
   const navigate = useNavigate();
 
   const sellerEmail = resolveSellerEmail(location.state);
-  const { seller, loadingProfile }  = useSellerDisplayData(sellerEmail);
+  const { seller, loadingProfile } = useSellerDisplayData(sellerEmail);
 
-  const [sidebarOpen,      setSidebarOpen]      = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [isMobile,         setIsMobile]         = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const checkScreenSize = () => {
@@ -126,8 +127,8 @@ function DashboardLayout() {
     return () => window.removeEventListener("resize", checkScreenSize);
   }, []);
 
-  const handleSidebarToggle  = useCallback(() => setSidebarOpen(prev => !prev), []);
-  const handleSidebarClose   = useCallback(() => { if (isMobile) setSidebarOpen(false); }, [isMobile]);
+  const handleSidebarToggle = useCallback(() => setSidebarOpen(prev => !prev), []);
+  const handleSidebarClose = useCallback(() => { if (isMobile) setSidebarOpen(false); }, [isMobile]);
   const handleCollapseChange = useCallback((collapsed) => setSidebarCollapsed(collapsed), []);
 
   const activeSellerId = getSellerId();
@@ -220,7 +221,7 @@ function DashboardLayout() {
     <div
       className={[
         "app-container",
-        sidebarOpen      ? "sidebar-open"      : "",
+        sidebarOpen ? "sidebar-open" : "",
         sidebarCollapsed ? "sidebar-collapsed" : "",
       ].filter(Boolean).join(" ")}
     >
@@ -230,7 +231,7 @@ function DashboardLayout() {
         isOpen={sidebarOpen}
         onClose={handleSidebarClose}
         onToggle={handleSidebarToggle}
-        sellerName={seller?.name  || ""}
+        sellerName={seller?.name || ""}
         sellerEmail={seller?.email || sellerEmail || ""}
         onCollapseChange={handleCollapseChange}
         isMobile={isMobile}
