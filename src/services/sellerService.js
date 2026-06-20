@@ -3345,7 +3345,8 @@ export const advertisementService = {
   createCampaign,
   pauseCampaign,
   resumeCampaign,
-  deleteCampaign
+  deleteCampaign,
+  fetchSellerCampaignProduct
 };
 
 export const haatzupService = {

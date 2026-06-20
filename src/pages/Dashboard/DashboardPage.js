@@ -42,9 +42,13 @@ const DashboardPage = () => {
   const fetchingRef = useRef(false);
 
   const loadDashboardData = useCallback(async () => {
-    if (!sellerId || !sellerEmail) {
-      setError("Seller session not found. Please login again.");
-      setLoading(false);
+    const isValidId = sellerId && sellerId.startsWith("HS") && !sellerId.includes("@");
+
+    if (!isValidId || !sellerEmail) {
+      if (!sellerEmail) {
+        setError("Seller session not found. Please login again.");
+        setLoading(false);
+      }
       return;
     }
 
@@ -148,6 +152,17 @@ const DashboardPage = () => {
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
+
+  useEffect(() => {
+    const isValidId = sellerId && sellerId.startsWith("HS") && !sellerId.includes("@");
+    if (!isValidId && sellerEmail) {
+      const timer = setTimeout(() => {
+        setError("Seller session not found. Please login again.");
+        setLoading(false);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [sellerId, sellerEmail]);
 
   if (loading) {
     return (

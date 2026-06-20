@@ -7,6 +7,12 @@ const CANONICAL_SELLER_KEY = "__haatza_sellerId";
 export const resolveSellerId = () => {
   if (typeof window === "undefined") return "";
 
+  const isValidSellerId = (val) => {
+    if (!val || typeof val !== "string") return false;
+    const trimmed = val.trim();
+    return !trimmed.includes("@") && (trimmed.startsWith("HS") || trimmed.length >= 2);
+  };
+
   const keys = [
     CANONICAL_SELLER_KEY,
     "sellerId",
@@ -28,26 +34,26 @@ export const resolveSellerId = () => {
     if (sessionVal && sessionVal.trim().length >= 2) {
       const val = sessionVal.trim();
       if (!val.startsWith("{") && !val.startsWith("[")) {
-        return val;
+        if (isValidSellerId(val)) return val;
+      } else {
+        try {
+          const obj = JSON.parse(val);
+          const id =
+            obj?.sellerId ||
+            obj?.seller_id ||
+            obj?.userId ||
+            obj?.user_id ||
+            obj?.user?.sellerId ||
+            obj?.user?.seller_id ||
+            obj?.data?.sellerId ||
+            obj?.data?.seller_id ||
+            obj?.seller?.sellerId ||
+            obj?.seller?.seller_id ||
+            obj?.id ||
+            obj?.uid;
+          if (isValidSellerId(id)) return id.trim();
+        } catch {}
       }
-      try {
-        const obj = JSON.parse(val);
-        const id =
-          obj?.sellerId ||
-          obj?.seller_id ||
-          obj?.userId ||
-          obj?.user_id ||
-          obj?.user?.sellerId ||
-          obj?.user?.seller_id ||
-          obj?.data?.sellerId ||
-          obj?.data?.seller_id ||
-          obj?.seller?.sellerId ||
-          obj?.seller?.seller_id ||
-          obj?.id ||
-          obj?.uid ||
-          obj?.userEmail;
-        if (id && typeof id === "string" && id.length >= 2) return id;
-      } catch {}
     }
 
     // 2. Local Storage
@@ -55,26 +61,26 @@ export const resolveSellerId = () => {
     if (localVal && localVal.trim().length >= 2) {
       const val = localVal.trim();
       if (!val.startsWith("{") && !val.startsWith("[")) {
-        return val;
+        if (isValidSellerId(val)) return val;
+      } else {
+        try {
+          const obj = JSON.parse(val);
+          const id =
+            obj?.sellerId ||
+            obj?.seller_id ||
+            obj?.userId ||
+            obj?.user_id ||
+            obj?.user?.sellerId ||
+            obj?.user?.seller_id ||
+            obj?.data?.sellerId ||
+            obj?.data?.seller_id ||
+            obj?.seller?.sellerId ||
+            obj?.seller?.seller_id ||
+            obj?.id ||
+            obj?.uid;
+          if (isValidSellerId(id)) return id.trim();
+        } catch {}
       }
-      try {
-        const obj = JSON.parse(val);
-        const id =
-          obj?.sellerId ||
-          obj?.seller_id ||
-          obj?.userId ||
-          obj?.user_id ||
-          obj?.user?.sellerId ||
-          obj?.user?.seller_id ||
-          obj?.data?.sellerId ||
-          obj?.data?.seller_id ||
-          obj?.seller?.sellerId ||
-          obj?.seller?.seller_id ||
-          obj?.id ||
-          obj?.uid ||
-          obj?.userEmail;
-        if (id && typeof id === "string" && id.length >= 2) return id;
-      } catch {}
     }
   }
 

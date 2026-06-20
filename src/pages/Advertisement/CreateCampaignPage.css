@@ -712,3 +712,20 @@
   from { transform: translateY(-10px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+
+/* Step 2 Choose Products selections */
+.products-selection-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.products-selection-table tbody tr.product-row-selected {
+  background-color: #f0f4ff;
+}
+
+.products-selection-table tbody tr.product-row-selected:hover {
+  background-color: #e1ebff;
+}
+
+.products-selection-table input[type="checkbox"] {
+  accent-color: var(--primary-color);
+}
